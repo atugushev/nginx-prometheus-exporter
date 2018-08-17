@@ -17,7 +17,7 @@ access_log /var/log/nginx/access.log mtail;
 docker run -d \
   -v /var/log/nginx:/var/log/nginx:ro \
   -p 3093:3093 \
-  ndiazg/nginx-prometheus-exporter \
+  alikus/nginx-prometheus-exporter \
   /var/log/nginx/access.log
 ```
 ## Scrape
