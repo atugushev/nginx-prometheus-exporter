@@ -1,9 +1,10 @@
 counter http_requests_total by vhost, method, code, content_type
-counter http_request_duration_milliseconds_sum by vhost, method, code, content_type
 counter http_response_size_bytes_sum by vhost, method, code, content_type
+counter http_request_latency_seconds_sum by vhost, method, code, content_type
+counter http_request_latency_seconds_bucket by vhost, method, code, content_type, le
 
 # log_format mtail '$server_name $remote_addr - $remote_user [$time_local] '
-#                  '"$request" $status $bytes_sent $request_time'
+#                  '"$request" $status $bytes_sent $request_time '
 #                  '"$http_referer" "$http_user_agent" "$content_type"';
 
 /^/ +
@@ -15,12 +16,49 @@ counter http_response_size_bytes_sum by vhost, method, code, content_type
 /"(?P<request_method>[A-Z]+) (?P<request_uri>\S+) (?P<http_version>HTTP\/[0-9\.]+)" / +
 /(?P<status>\d{3}) / +
 /(?P<bytes_sent>\d+) / +
-/(?P<request_seconds>\d+)\.(?P<request_milliseconds>\d+) / +
+/(?P<request_seconds>\d+\.\d+) / +
 /"(?P<http_referer>\S+)" / +
 /"(?P<http_user_agent>[[:print:]]+)" / +
 /"(?P<content_type>[^;\\]+)(;.*)?"/ +
 /$/ {
   http_requests_total[$vhost][tolower($request_method)][$status][$content_type]++
-  http_request_duration_milliseconds_sum[$vhost][tolower($request_method)][$status][$content_type] += $request_seconds * 1000 + $request_milliseconds
   http_response_size_bytes_sum[$vhost][tolower($request_method)][$status][$content_type] += $bytes_sent
+  $request_seconds <= 0.005 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.005"]++
+  }
+  $request_seconds <= 0.01 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.01"]++
+  }
+  $request_seconds <= 0.025 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.025"]++
+  }
+  $request_seconds <= 0.05 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.05"]++
+  }
+  $request_seconds <= 0.1 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.1"]++
+  }
+  $request_seconds <= 0.25 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.25"]++
+  }
+  $request_seconds <= 0.5 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["0.5"]++
+  }
+  $request_seconds <= 1 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["1"]++
+  }
+  $request_seconds <= 2.5 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["2.5"]++
+  }
+  $request_seconds <= 5 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["5"]++
+  }
+  $request_seconds <= 10 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["10"]++
+  }
+  $request_seconds <= 15 {
+    http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["15"]++
+  }
+  http_request_latency_seconds_bucket[$vhost][tolower($request_method)][$status][$content_type]["+Inf"]++
+  http_request_latency_seconds_sum[$vhost][tolower($request_method)][$status][$content_type] += $request_seconds
 }
